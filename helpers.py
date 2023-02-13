@@ -2,7 +2,6 @@
 import requests
 from bs4 import BeautifulSoup
 import re
-from bioregistry import parse_curie
 
 class Paper:
     def __init__(self, title=None, abstract=None, pmids=None):
