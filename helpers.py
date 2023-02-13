@@ -109,7 +109,7 @@ class Paper:
                 'to': idx,
                 'type': 'IN_CELL_LINE',
             })
-            
+
         return self.adj_list
 
     def init_NER(self):
@@ -129,16 +129,17 @@ class Paper:
     def populate_terms(self):
         for term in self.bern_res:
             id_raw = term['id'][0]
-            parsed_curie = parse_curie(id_raw)
+            parsed_curie = id_raw.split(':')
+            db, idx = parsed_curie[0].lower(), parsed_curie[1]
             print(parsed_curie)
-            if 'mesh' == parsed_curie[0]: 
+            if 'mesh' == db and idx not in self.mesh_terms.keys(): 
                 # print(term['id'])
-                idx = parsed_curie[1]
                 mesh_res = requests.get(f'https://id.nlm.nih.gov/mesh/{idx}.json').json()
                 synonyms = [i['EntryTerm']['value'] for i in requests.get(self.gen_funcs['synonyms'](idx)).json()['results']['bindings']]
                 # print(mesh_res)
                 # break
                 self.mesh_terms[idx] = {
+                    'db': db,
                     'heading': mesh_res['label']['@value'],
                     'qualifiers': [i[-6:] for i in mesh_res['allowableQualifier']] if 'allowableQualifier' in mesh_res.keys() else None,
                     'concepts': [i[-6:] for i in mesh_res['concept']] if 'concept' in mesh_res.keys() else None,
@@ -147,40 +148,44 @@ class Paper:
                     'pred_type': term['obj'],
                 }
 
-            elif 'ncbigene' == parsed_curie[0]:
-                gene_id = parsed_curie[1]
-                ncbi_res = requests.get(self.gen_funcs['NCBIGene'](gene_id)).json()
+            elif 'ncbigene' == db and idx not in self.ncbigene_terms.keys():
+                ncbi_res = requests.get(self.gen_funcs['NCBIGene'](idx)).json()
                 # print(ncbi_res)
-                self.ncbigene_terms[gene_id] = {
+                summary = ncbi_res['GeneSummaries']['GeneSummary'][0]
+                self.ncbigene_terms[idx] = {
+                    **summary,
+                    'db': db,
                     'pred_type': term['obj'],
                 }
 
-            elif 'ncbitaxon' == parsed_curie[0]:
-                tax_id = parsed_curie[1]
-                ncbi_res = requests.get(self.gen_funcs['NCBITaxon'](tax_id)).json()
+            elif 'ncbitaxon' == db and idx not in self.ncbitaxon_terms.keys():
+                ncbi_res = requests.get(self.gen_funcs['NCBITaxon'](idx)).json()
                 # print(ncbi_res)
-                self.ncbitaxon_terms[tax_id] = {
+                summary = ncbi_res['TaxonomySummaries']['TaxonomySummary'][0]
+                self.ncbitaxon_terms[idx] = {
+                    **summary,
+                    'db': db,
                     'pred_type': term['obj'],
                 }
 
-            # elif 'omim' == parsed_curie[0]: 
+            # elif 'mim' == parsed_curie[0]: 
             #     omim_id = parsed_curie[1]
             #     page = requests.get(gen_funcs['OMIM'](omim_id))
 
             #     soup = BeautifulSoup(page.content, "html.parser")
 
-            elif 'cl' == parsed_curie[0]:
-                cl_id = parsed_curie[1]
-                cl_res = requests.get(self.gen_funcs['OLS'](cl_id)).json()
+            elif 'cl' == db and idx not in self.cell_types.keys():
+                cl_res = requests.get(self.gen_funcs['OLS'](idx)).json()
                 # print(cl_res)
-                self.cell_types[cl_id] = {
+                self.cell_types[idx] = {
+                    'db': db,
                     'pred_type': term['obj'],
                 }
                 
-            elif 'cellosaurus' == parsed_curie[0]:
-                cellosaurus_id = parsed_curie[1]
-                cellosaurus_res = requests.get(self.gen_funcs['cellosaurus']('CVCL_J'+cellosaurus_id)).json()
+            elif 'cellosaurus' == db and idx not in self.cell_lines.keys():
+                cellosaurus_res = requests.get(self.gen_funcs['cellosaurus']('CVCL_J'+idx)).json()
                 # print(cellosaurus_res)
-                self.cell_lines[cellosaurus_id] = {
+                self.cell_lines[idx] = {
+                    'db': db,
                     'pred_type': term['obj'],
                 }
