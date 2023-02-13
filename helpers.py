@@ -9,6 +9,9 @@ class Paper:
         self.title = title
         self.abstract = abstract
         self.pmids = pmids
+        self.bern_res = []
+        self.adj_list = []
+
         self.gen_funcs = {
             'synonyms': lambda a: 'https://id.nlm.nih.gov/mesh/sparql?query=PREFIX%20rdf%3A%20%3Chttp%3A%2F%2Fwww.w3.org%2F1999%2F02%2F22-rdf-syntax-ns%23%3E%0D%0APREFIX%20rdfs%3A%20%3Chttp%3A%2F%2Fwww.w3.org%2F2000%2F01%2Frdf-schema%23%3E%0D%0APREFIX%20xsd%3A%20%3Chttp%3A%2F%2Fwww.w3.org%2F2001%2FXMLSchema%23%3E%0D%0APREFIX%20owl%3A%20%3Chttp%3A%2F%2Fwww.w3.org%2F2002%2F07%2Fowl%23%3E%0D%0APREFIX%20meshv%3A%20%3Chttp%3A%2F%2Fid.nlm.nih.gov%2Fmesh%2Fvocab%23%3E%0D%0APREFIX%20mesh%3A%20%3Chttp%3A%2F%2Fid.nlm.nih.gov%2Fmesh%2F%3E%0D%0APREFIX%20mesh2015%3A%20%3Chttp%3A%2F%2Fid.nlm.nih.gov%2Fmesh%2F2015%2F%3E%0D%0APREFIX%20mesh2016%3A%20%3Chttp%3A%2F%2Fid.nlm.nih.gov%2Fmesh%2F2016%2F%3E%0D%0APREFIX%20mesh2017%3A%20%3Chttp%3A%2F%2Fid.nlm.nih.gov%2Fmesh%2F2017%2F%3E%0D%0A%0D%0ASELECT%20%3FEntryTerm%0D%0AFROM%20%3Chttp%3A%2F%2Fid.nlm.nih.gov%2Fmesh%3E%0D%0AWHERE%20%7B%0D%0A%20%20mesh%3A{}%20meshv%3Aconcept%20%3Fconcept%20.%0D%0A%20%20%3Fconcept%20meshv%3Aterm%20%3Fterm%20.%0D%0A%20%20%3Fterm%20rdfs%3Alabel%20%3FEntryTerm%0D%0A%7D%20%0D%0A%0D%0A%23Entry%20Terms%20for%20Ofloxacin%20(D015242)%0D%0A&format=JSON&limit=50&offset=0&inference=true'.format(a),
             'descriptor': lambda a: 'https://id.nlm.nih.gov/mesh/sparql?query=PREFIX%20rdf%3A%20%3Chttp%3A%2F%2Fwww.w3.org%2F1999%2F02%2F22-rdf-syntax-ns%23%3E%0D%0APREFIX%20rdfs%3A%20%3Chttp%3A%2F%2Fwww.w3.org%2F2000%2F01%2Frdf-schema%23%3E%0D%0APREFIX%20xsd%3A%20%3Chttp%3A%2F%2Fwww.w3.org%2F2001%2FXMLSchema%23%3E%0D%0APREFIX%20owl%3A%20%3Chttp%3A%2F%2Fwww.w3.org%2F2002%2F07%2Fowl%23%3E%0D%0APREFIX%20meshv%3A%20%3Chttp%3A%2F%2Fid.nlm.nih.gov%2Fmesh%2Fvocab%23%3E%0D%0APREFIX%20mesh%3A%20%3Chttp%3A%2F%2Fid.nlm.nih.gov%2Fmesh%2F%3E%0D%0APREFIX%20mesh2015%3A%20%3Chttp%3A%2F%2Fid.nlm.nih.gov%2Fmesh%2F2015%2F%3E%0D%0APREFIX%20mesh2016%3A%20%3Chttp%3A%2F%2Fid.nlm.nih.gov%2Fmesh%2F2016%2F%3E%0D%0APREFIX%20mesh2017%3A%20%3Chttp%3A%2F%2Fid.nlm.nih.gov%2Fmesh%2F2017%2F%3E%0D%0A%0D%0A%20SELECT%20%3Fd%20%3FdName%0D%0A%20FROM%20%3Chttp%3A%2F%2Fid.nlm.nih.gov%2Fmesh%3E%0D%0A%20%0D%0A%20WHERE%20%7B%0D%0A%20%20%20%0D%0A%20%3Fd%20a%20meshv%3ADescriptor%20.%0D%0A%20%3Fd%20meshv%3Aactive%201%20.%0D%0A%20%3Fd%20rdfs%3Alabel%20%3FdName%20.%0D%0A%20FILTER(REGEX(%3FdName%2C%22{}%22%2C%22i%22))%0D%0A%20%0D%0A%20%7D%0D%0A%20ORDER%20BY%20%3Fd%0D%0A%0D%0A%23Find%20a%20set%20of%20descriptors%20and%20terms%20that%20contain%20%22infection.%22&format=JSON&limit=50&offset=0&inference=true'.format(a),
@@ -18,6 +21,7 @@ class Paper:
             'cellosaurus': lambda a: 'https://api.cellosaurus.org/cell-line/{}?format=json'.format(a),
             'OMIM': lambda a: 'https://omim.org/clinicalSynopsis/{}'.format(a),
         }
+
         self.mesh_terms = {}
         self.ncbigene_terms = {}
         self.ncbitaxon_terms = {}
@@ -27,35 +31,98 @@ class Paper:
 
     def __node__(self):
         return {
-            'title': self.title,
-            'ref_list': [], #doi
-            'NER_terms':  {
-                'Gene': [], # (id, position in text)
-                'Disease': [], 
-                'Chemical': [], 
-                'Species': [], 
-                'Mutation': [], 
-                'CellType': [], 
-                'CellLine': [], 
-                'DNA': [], 
-                'RNA': [], 
-            },
-            'authors': [],
-            'keywords': [],
-            'publication_type': '',
+            self.pmids if self.pmids else 'id': {
+                'title': self.title,
+                'label': ':Paper',
+                'ref_list': [], #doi
+                'NER_terms':  {
+                    'gene': self.__get_terms__('gene'), # (id, position in text)
+                    'disease': self.__get_terms__('disease'), 
+                    'drug': self.__get_terms__('drug'), 
+                    'species': self.__get_terms__('species'), 
+                    'mutation': self.__get_terms__('mutation'), 
+                    'cell_type': self.__get_terms__('cell_type'), 
+                    'cell_line': self.__get_terms__('cell_line'), 
+                    'DNA': self.__get_terms__('DNA'), 
+                    'RNA': self.__get_terms__('RNA'), 
+                },
+                'authors': [],
+                'keywords': [],
+                'publication_type': '',
+            }
         }
+    
+    def __term_obj__(self):
+        return {
+            'mesh': self.mesh_terms,
+            'ncbigene': self.ncbigene_terms,
+            'ncbitaxon': self.ncbitaxon_terms,
+            'omim': self.omim_terms,
+            'cell_types': self.cell_types,
+            'cell_lines': self.cell_lines,
+        }
+    
+    def __get_terms__(self, term_type):
+        term_list = []
+        for term in self.bern_res:
+            if term['obj'] == term_type:
+                term_list.append({'id': term['id'][0], 'position': term['span']})
+        
+        return term_list
+
+    def __adjacency__(self):
+        # loop over mesh terms and add edge to adj_list
+        for idx in self.mesh_terms.keys():
+            self.adj_list.append({
+                'from': self.pmids if self.pmids else 'id',
+                'to': idx,
+                'type': 'IN_MESH',
+            })
+        # do this for the rest of the term dictionaries 
+        for idx in self.ncbigene_terms.keys():
+            self.adj_list.append({
+                'from': self.pmids if self.pmids else 'id',
+                'to': idx,
+                'type': 'IN_GENE',
+            })
+        for idx in self.ncbitaxon_terms.keys():
+            self.adj_list.append({
+                'from': self.pmids if self.pmids else 'id',
+                'to': idx,
+                'type': 'IN_SPECIES',
+            })
+        for idx in self.omim_terms.keys():
+            self.adj_list.append({
+                'from': self.pmids if self.pmids else 'id',
+                'to': idx,
+                'type': 'IN_DISEASE',
+            })
+        for idx in self.cell_types.keys():
+            self.adj_list.append({
+                'from': self.pmids if self.pmids else 'id',
+                'to': idx,
+                'type': 'IN_CELL_TYPE',
+            })
+        for idx in self.cell_lines.keys():
+            self.adj_list.append({
+                'from': self.pmids if self.pmids else 'id',
+                'to': idx,
+                'type': 'IN_CELL_LINE',
+            })
+            
+        return self.adj_list
 
     def init_NER(self):
         if self.abstract:
-            self.bern_res = [i for i in self.query_plain(self.abstract)['annotations'] if i['prob'] > 0.5] 
+            self.bern_res = [i for i in self.query_plain(self.abstract)['annotations'] if i['prob'] > 0.5 and i['id'][0] != 'CUI-less'] 
         elif self.pmids:
-            self.bern_res = [i for i in self.query_pmid(self.pmids)['annotations'] if i['prob'] > 0.5] 
+            self.bern_res = [i for i in self.query_pmid(self.pmids)['annotations'] if i['prob'] > 0.5 and i['id'][0] != 'CUI-less'] 
 
-    def query_plain(abstract):
+    def query_plain(self, abstract):
         url="http://bern2.korea.ac.kr/plain"
         return requests.post(url, json={'text': abstract}).json()
 
-    def query_pmid(pmids):
+    def query_pmid(self, pmids):
         url="http://bern2.korea.ac.kr/pubmed"
         return requests.get(url + "/" + ",".join(pmids)).json()
 
@@ -112,7 +179,7 @@ class Paper:
                 
             elif 'cellosaurus' == parsed_curie[0]:
                 cellosaurus_id = parsed_curie[1]
-                cellosaurus_res = requests.get(self.gen_funcs['cellosaurus'](cellosaurus_id)).json()
+                cellosaurus_res = requests.get(self.gen_funcs['cellosaurus']('CVCL_J'+cellosaurus_id)).json()
                 # print(cellosaurus_res)
                 self.cell_lines[cellosaurus_id] = {
                     'pred_type': term['obj'],
